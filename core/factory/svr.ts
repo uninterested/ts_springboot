@@ -2,8 +2,7 @@ import { HttpMethod, IParamsDefineProps } from "../decorators"
 import http from 'http'
 import URL from 'url'
 import QS from 'qs'
-import { kParamType } from "../constant"
-// const http = require('http')
+import { kHeaders, kParamType } from "../constant"
 
 export interface IPoolProps {
   path: string
@@ -24,19 +23,33 @@ export default class Svr {
     if (this.app) this.app.close()
     this.app = http.createServer()
     this.app.on('request', async (req, res) => {
-      const data = await this.innerParse(req)
-      const handle = this.findBest(req)
-      if (handle) {
-        const params = this.handleParams(handle, data, req)
-        const ret = handle.fn.apply(handle.controller, params)
-        res.statusCode = 200
-        res.end(ret)
-      } else {
-        res.statusCode = 404
-        res.end()
-      }
+      await this.processRequest(req, res)
     })
     this.app.listen(port, cb)
+  }
+
+  private async processRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+    const data = await this.innerParse(req)
+    const handle = this.findBest(req)
+    if (handle) {
+      try {
+        const params = this.handleParams(handle, data, req)
+        const ret = await handle.fn.apply(handle.controller, params)
+        res.statusCode = 200
+        const headers = {
+          'Content-Type': 'application/json',
+          ...Reflect.getMetadata(kHeaders, handle.fn)
+        }
+        Object.keys(headers).forEach(h => res.setHeader(h, headers[h]))
+        res.end(this.parseResponse(ret))
+      } catch (ex) {
+        res.statusCode = 500
+        res.end()
+      }
+    } else {
+      res.statusCode = 404
+      res.end()
+    }
   }
 
   private innerParse(req: http.IncomingMessage): Promise<any> {
@@ -67,7 +80,7 @@ export default class Svr {
     })
     return paramArray.map(e => {
       if (e.decorator === 'Body') {
-       return this.transferType(e.paramsType, body)
+        return this.transferType(e.paramsType, body)
       } else if (e.decorator === 'PathValue') {
         return this.transferType(e.paramsType, Params[e.key])
       } else if (e.decorator === 'QueryValue') {
@@ -99,5 +112,11 @@ export default class Svr {
         if (e.regex.test(pathname)) return true
       return false
     })
+  }
+
+  private parseResponse(response: any) {
+    const type = Object.prototype.toString.call(response)
+    if (['[object Array]', '[object Object]',].includes(type)) return JSON.stringify(response)
+    return response
   }
 }

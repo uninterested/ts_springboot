@@ -1,6 +1,8 @@
 export default class UserService {
-  public test() {
-    return 'response from user service test'
+  public async test() {
+    return {
+      user: '123'
+    }
   }
   public response(s: string, d: number, user: any) {
     console.log('i receive :', s, d, user)

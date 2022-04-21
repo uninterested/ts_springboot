@@ -1,4 +1,4 @@
-import  { RestController, GET, POST, Autowired, PathValue, QueryValue, Body } from '../../core/decorators'
+import  { RestController, GET, POST, Autowired, PathValue, QueryValue, Body, Header } from '../../core/decorators'
 import UserService from './user_service';
 
 interface IUser {
@@ -12,6 +12,10 @@ export default class UserController {
   userService: UserService;
 
   @GET('/hello')
+  @Header({
+    'Cache-Control': 'max-age=100',
+    // 'Content-Type': 'text/plain'
+  })
   hello1() {
     return this.userService.test()
   }

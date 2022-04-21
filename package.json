@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "tsc -p tsconfig.json && node dist/demo/application.js"
+  },
   "dependencies": {
     "path-to-regexp": "^6.2.0",
     "qs": "^6.10.3",

@@ -2,7 +2,7 @@ import 'reflect-metadata'
 
 import { RestController } from './class_decorator'
 
-import { HttpMethod, GET, POST, PUT, DELETE, PATCH, RequestMapping } from './function_decorator'
+import { HttpMethod, GET, POST, PUT, DELETE, PATCH, RequestMapping, Header } from './function_decorator'
 
 import { IOCDecorator } from './ioc_decorator'
 
@@ -12,7 +12,7 @@ import { Body, Request, PathValue, QueryValue, TDecorator, IParamsDefineProps } 
 
 export {
   RestController,
-  HttpMethod, GET, POST, PUT, DELETE, PATCH, RequestMapping,
+  HttpMethod, GET, POST, PUT, DELETE, PATCH, RequestMapping, Header,
   IOCDecorator,
   Autowired,
   Body, Request, PathValue, QueryValue, TDecorator, IParamsDefineProps
