@@ -12,10 +12,6 @@ export default class UserController {
   userService: UserService;
 
   @GET('/hello')
-  @Header({
-    'Cache-Control': 'max-age=100',
-    // 'Content-Type': 'text/plain'
-  })
   hello1() {
     return this.userService.test()
   }

@@ -4,7 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "tsc -p tsconfig.json && node dist/demo/application.js"
+    "build": "tsc -p tsconfig.json",
+    "start": "yarn build && node dist/demo/application.js"
   },
   "dependencies": {
     "path-to-regexp": "^6.2.0",
