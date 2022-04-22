@@ -3,6 +3,7 @@ import http from 'http'
 import URL from 'url'
 import QS from 'qs'
 import { kHeaders, kParamType } from "../constant"
+import InterceptorRegistry from "../config/interceptor/interceptor_registry"
 
 export interface IPoolProps {
   path: string
@@ -12,44 +13,64 @@ export interface IPoolProps {
   fn: Function
 }
 
+export interface IConfigProps {
+  registry: InterceptorRegistry
+}
+
 export default class Svr {
   private _pool: IPoolProps[];
+  private _config: IConfigProps;
   private app?: http.Server
-  constructor(pool: IPoolProps[]) {
+  constructor(pool: IPoolProps[], config: IConfigProps) {
     this._pool = pool
+    this._config = config
   }
 
   public listen(port: number, cb?: () => void) {
     if (this.app) this.app.close()
     this.app = http.createServer()
-    this.app.on('request', async (req, res) => {
-      await this.processRequest(req, res)
-    })
+    this.app.on('request', async (req, res) => await this.processRequest(req, res))
     this.app.listen(port, cb)
   }
 
   private async processRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-    const data = await this.innerParse(req)
-    const handle = this.findBest(req)
+   const handle = this.findBest(req)
     if (handle) {
       try {
+        const data = await this.innerParse(req)
         const params = this.handleParams(handle, data, req)
+        
         const ret = await handle.fn.apply(handle.controller, params)
         res.statusCode = 200
-        const headers = {
-          'Content-Type': 'application/json',
-          ...Reflect.getMetadata(kHeaders, handle.fn)
-        }
-        Object.keys(headers).forEach(h => res.setHeader(h, headers[h]))
+        this.setHeader(handle, res)
         res.end(this.parseResponse(ret))
-      } catch (ex) {
+      } catch (ex: any) {
         res.statusCode = 500
-        res.end()
+        res.end(ex instanceof Error ? ex.message : (ex.message || ex))
       }
     } else {
       res.statusCode = 404
       res.end()
     }
+  }
+
+  private async executeInterceptor(req: http.IncomingMessage, res: http.ServerResponse, handle: IPoolProps) {
+    const interceptors = this._config.registry.getInterceptors()
+    for (let i = 0; i < interceptors.length; i++) {
+      const interceptor = interceptors[i]
+      // interceptor.interceptor.preHandle()
+    }
+    // .forEach(interceptor => {
+    //   interceptor.interceptor.preHandle(req, res, {})
+    // })
+  }
+
+  private setHeader(handle: IPoolProps, res: http.ServerResponse) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...Reflect.getMetadata(kHeaders, handle.fn)
+    }
+    Object.keys(headers).forEach(h => res.setHeader(h, headers[h]))
   }
 
   private innerParse(req: http.IncomingMessage): Promise<any> {

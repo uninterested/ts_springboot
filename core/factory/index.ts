@@ -1,21 +1,31 @@
 import { pathToRegexp } from 'path-to-regexp'
+import InterceptorRegistry from '../config/interceptor/interceptor_registry';
 import { kApiMethod, kMethod, kPath } from "../constant";
 import { HttpMethod } from "../decorators";
-import Svr, { IPoolProps } from "./svr";
+import Svr, { IPoolProps, IConfigProps } from "./svr";
 
 
 export default class Factory {
   private pool: IPoolProps[] = []
+  private config: IConfigProps = {
+    registry: new InterceptorRegistry()
+  }
 
   create(module: Function) {
+    this.clean()
     this.builder(module)
-    return new Svr(this.pool)
+    return new Svr(this.pool, this.config)
   }
 
   private builder(module: Function) {
-    this.clean()
     const controllers = Reflect.getMetadata('controllers', module) as (typeof Function)[]
+    const configs = Reflect.getMetadata('configs', module) as (typeof Function)[]
     if (controllers.length <= 0) throw new Error('no controller found')
+    this.buildConfig(configs)
+    this.buildController(controllers)
+  }
+
+  private buildController(controllers: (typeof Function)[]) {
     const cache = []
     controllers.forEach(Fn => {
       const basePaths = Reflect.getMetadata(kPath, Fn)
@@ -29,6 +39,14 @@ export default class Factory {
       })
     })
     this.pool = cache.flat(Infinity)
+  }
+
+  private buildConfig(configs: (typeof Function)[]) {
+    configs.forEach((Fn) => {
+      const instance = new Fn()
+      // 注入拦截器
+      instance['addInterceptors'](this.config.registry)
+    })
   }
 
   private buildOne(base: string[], target: string[], apiMethods: HttpMethod[], fn: Function, instance: Object) {

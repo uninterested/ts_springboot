@@ -8,4 +8,4 @@ class Application {
   }
 }
 
-Application.runApplication(3000, () => console.log('listening'))
+Application.runApplication(3000, () => console.log('监听端口中 3000 ...'))

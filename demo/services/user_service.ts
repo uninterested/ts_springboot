@@ -4,7 +4,7 @@ export default class UserService {
       user: '123'
     }
   }
-  public response(s: string, d: number, user: any) {
+  public response(s: string, d: string, user: any) {
     console.log('i receive :', s, d, user)
     return "hello from service of response"
   }
