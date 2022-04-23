@@ -54,10 +54,12 @@ export default class Svr {
     }
   }
 
-  private async executeInterceptor(req: http.IncomingMessage, res: http.ServerResponse, handle: IPoolProps) {
+  private async executeInterceptor(req: http.IncomingMessage, res: http.ServerResponse, handle: IPoolProps, pathname: string) {
     const interceptors = this._config.registry.getInterceptors()
     for (let i = 0; i < interceptors.length; i++) {
       const interceptor = interceptors[i]
+      // interceptor.excludePathPatterns
+      // interceptor.allowedPaths
       // interceptor.interceptor.preHandle()
     }
     // .forEach(interceptor => {
