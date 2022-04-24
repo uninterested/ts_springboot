@@ -4,6 +4,8 @@ import URL from 'url'
 import QS from 'qs'
 import { kHeaders, kParamType } from "../constant"
 import InterceptorRegistry from "../config/interceptor/interceptor_registry"
+import InterceptorRegistration from "../config/interceptor/interceptor_registration"
+import HandlerMethod from "../config/interceptor/handler_method"
 
 export interface IPoolProps {
   path: string
@@ -16,6 +18,8 @@ export interface IPoolProps {
 export interface IConfigProps {
   registry: InterceptorRegistry
 }
+
+type THandleFn = (req: http.IncomingMessage, res: http.ServerResponse, handle: object) => Promise<void> | void
 
 export default class Svr {
   private _pool: IPoolProps[];
@@ -34,43 +38,82 @@ export default class Svr {
   }
 
   private async processRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-   const handle = this.findBest(req)
+    const handle = this.findBest(req)
     if (handle) {
       try {
         const data = await this.innerParse(req)
         const params = this.handleParams(handle, data, req)
-        
+        const chain = this.getInterceptorChain(data.pathname)
+        const afterChain: THandleFn[] = []
+        const interceprotorResult = await this.executePreHandle(chain, req, res, handle, afterChain)
+        if (!interceprotorResult) {
+          this.send({ res, statusCode: 200, result: undefined, handle })
+          this.executeAfterCompletion(afterChain.reverse(), req, res, handle)
+          return
+        }
         const ret = await handle.fn.apply(handle.controller, params)
-        res.statusCode = 200
-        this.setHeader(handle, res)
-        res.end(this.parseResponse(ret))
+        this.send({ res, statusCode: 200, result: this.parseResponse(ret), handle })
+        this.executeAfterCompletion(afterChain.reverse(), req, res, handle)
       } catch (ex: any) {
-        res.statusCode = 500
-        res.end(ex instanceof Error ? ex.message : (ex.message || ex))
+        this.send({ res, statusCode: 500, result: ex instanceof Error ? ex.message : (ex.message || ex), handle })
       }
     } else {
-      res.statusCode = 404
-      res.end()
+      this.send({ res, statusCode: 404, result: undefined, handle: undefined })
     }
   }
 
-  private async executeInterceptor(req: http.IncomingMessage, res: http.ServerResponse, handle: IPoolProps, pathname: string) {
-    const interceptors = this._config.registry.getInterceptors()
-    for (let i = 0; i < interceptors.length; i++) {
-      const interceptor = interceptors[i]
-      // interceptor.excludePathPatterns
-      // interceptor.allowedPaths
-      // interceptor.interceptor.preHandle()
+  private send(opts: { res: http.ServerResponse, statusCode: number, result: any, handle: IPoolProps }) {
+    const { res, statusCode, result, handle } = opts
+    this.setHeader(handle, res)
+    res.statusCode = statusCode
+    res.end(result)
+  }
+
+  private async executePreHandle(
+    chain: InterceptorRegistration[],
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    handle: IPoolProps,
+    afterChain: THandleFn[]
+  ) {
+    const handleMethod = new HandlerMethod(handle)
+    const iteration = async (list: InterceptorRegistration[]) => {
+      if (list.length <= 0) return true
+      const firstInterceptor = list.shift()
+      const result = await firstInterceptor.interceptor.preHandle(req, res, handleMethod)
+      if (result) {
+        afterChain.push(firstInterceptor.interceptor.afterCompletion)
+        return await iteration(list)
+      }
+      return false
     }
-    // .forEach(interceptor => {
-    //   interceptor.interceptor.preHandle(req, res, {})
-    // })
+    return await iteration([...chain])
+  }
+
+  private executeAfterCompletion(chain: THandleFn[], req: http.IncomingMessage, res: http.ServerResponse, handle: IPoolProps) {
+    const handleMethod = new HandlerMethod(handle)
+    chain.forEach(async c => {
+      try {
+        await c(req, res, handleMethod)
+      } finally {
+        // empty
+      }
+    })
+  }
+
+  private getInterceptorChain(pathname: string) {
+    const interceptors = this._config.registry.getInterceptors()
+    // 查找出合适的拦截器
+    return interceptors.filter(interceptor => {
+      if (interceptor.excludeRegexp.some(rule => rule.test(pathname))) return false
+      return interceptor.allowedRegexp.some(rule => rule.test(pathname))
+    })
   }
 
   private setHeader(handle: IPoolProps, res: http.ServerResponse) {
     const headers = {
       'Content-Type': 'application/json',
-      ...Reflect.getMetadata(kHeaders, handle.fn)
+      ...(handle ? Reflect.getMetadata(kHeaders, handle.fn) : undefined)
     }
     Object.keys(headers).forEach(h => res.setHeader(h, headers[h]))
   }

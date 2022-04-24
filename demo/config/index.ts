@@ -5,7 +5,6 @@ import TestInterpotor from "./test_interceptor";
 
 export default class MyConfig implements WebConfig {
   addInterceptors(registry: InterceptorRegistry): void {
-    console.log('注入拦截器')
     registry.addInterceptor(new TestInterpotor())
       .addPathPatterns('/**')
   }

@@ -44,7 +44,6 @@ export default class Factory {
   private buildConfig(configs: (typeof Function)[]) {
     configs.forEach((Fn) => {
       const instance = new Fn()
-      // 注入拦截器
       instance['addInterceptors'](this.config.registry)
     })
   }
