@@ -30,6 +30,7 @@ export default class CorsRegistration {
 
   public allowCredentials(allow: boolean) {
     this.config.allowCredentials = allow
+    return this
   }
 
   public allowedMethods(...allow: HttpMethod[]) {
@@ -37,6 +38,7 @@ export default class CorsRegistration {
       if (!this.config.allowedMethods.includes(me))
         this.config.allowedMethods.push(me)
     })
+    return this
   }
 
   public maxAge(age: number) {
