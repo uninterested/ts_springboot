@@ -48,11 +48,10 @@ export default class Svr {
         const interceprotorResult = await this.executePreHandle(chain, req, res, handle, afterChain)
         if (!interceprotorResult) {
           this.send({ res, statusCode: 200, result: undefined, handle })
-          this.executeAfterCompletion(afterChain.reverse(), req, res, handle)
-          return
+        } else {
+          const ret = await handle.fn.apply(handle.controller, params)
+          this.send({ res, statusCode: 200, result: this.parseResponse(ret), handle })
         }
-        const ret = await handle.fn.apply(handle.controller, params)
-        this.send({ res, statusCode: 200, result: this.parseResponse(ret), handle })
         this.executeAfterCompletion(afterChain.reverse(), req, res, handle)
       } catch (ex: any) {
         this.send({ res, statusCode: 500, result: ex instanceof Error ? ex.message : (ex.message || ex), handle })
