@@ -1,4 +1,4 @@
-import { kApiMethod, kHeaders, kMethod, kPath } from "../constant"
+import { kApiMethod, kExceptionHandler, kHeaders, kMethod, kPath } from "../constant"
 
 export enum HttpMethod {
   GET = 'GET',
@@ -37,6 +37,15 @@ export const RequestMapping = (path?: string, method?: HttpMethod | HttpMethod[]
 export const Header = (opts?: {[k: string]: string | number | Date}): MethodDecorator => {
   return (target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) => {
     Reflect.defineMetadata(kHeaders, opts, descriptor.value)
+  }
+}
+
+export const ExceptionHandler = (exceptionName: string): MethodDecorator => {
+  return (target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) => {
+    Reflect.defineMetadata(kExceptionHandler, exceptionName, descriptor.value)
+    const methods = Reflect.getMetadata(kMethod, target) || {}
+    methods[propertyKey] = true
+    Reflect.defineMetadata(kMethod, methods, target)
   }
 }
 

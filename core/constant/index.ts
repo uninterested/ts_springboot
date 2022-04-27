@@ -9,3 +9,7 @@ export const kParamType = 'paramType'
 export const kHeaders = 'headerTag'
 
 export const kConfiguration = 'kConfiguration'
+
+export const kControllerAdvice = 'kControllerAdvice'
+
+export const kExceptionHandler = 'kExceptionHandler'

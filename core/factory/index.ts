@@ -1,7 +1,7 @@
 import { pathToRegexp } from 'path-to-regexp'
 import CorsRegistry from '../config/annotation/cors_registry';
 import InterceptorRegistry from '../config/interceptor/interceptor_registry';
-import { kApiMethod, kConfiguration, kMethod, kPath } from "../constant";
+import { kApiMethod, kConfiguration, kControllerAdvice, kMethod, kPath } from "../constant";
 import { HttpMethod } from "../decorators";
 import Svr, { IPoolProps, IConfigProps } from "./svr";
 
@@ -49,6 +49,8 @@ export default class Factory {
         const instance = new Fn()
         instance['addInterceptors'](this.config.registry)
         instance['addCorsMappings'](this.config.corsRegistry)
+      } else if (Reflect.getMetadata(kControllerAdvice, Fn)) { // ControllerAdvice
+        
       }
     })
   }

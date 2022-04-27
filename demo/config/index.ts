@@ -11,10 +11,10 @@ export default class MyConfig implements WebConfig {
       .addPathPatterns('/**')
   }
   addCorsMappings(registry: CorsRegistry): void {
-    registry.addMapping("/user/*")
+    registry.addMapping("/**")
       .allowCredentials(true)
       .allowedMethods(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.PATCH, HttpMethod.POST, HttpMethod.PUT, HttpMethod.OPTIONS)
-      .allowedHeaders('*')
+      .allowedHeaders('Content-Type', "token")
       .allowedOrigins("*")
       .maxAge(2000)
   }
