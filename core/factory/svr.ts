@@ -6,6 +6,7 @@ import { kHeaders, kParamType } from "../constant"
 import InterceptorRegistry from "../config/interceptor/interceptor_registry"
 import InterceptorRegistration from "../config/interceptor/interceptor_registration"
 import HandlerMethod from "../config/interceptor/handler_method"
+import CorsRegistry from "../config/annotation/cors_registry"
 
 export interface IPoolProps {
   path: string
@@ -17,6 +18,7 @@ export interface IPoolProps {
 
 export interface IConfigProps {
   registry: InterceptorRegistry
+  corsRegistry: CorsRegistry
 }
 
 type THandleFn = (req: http.IncomingMessage, res: http.ServerResponse, handle: object) => Promise<void> | void
@@ -39,30 +41,39 @@ export default class Svr {
 
   private async processRequest(req: http.IncomingMessage, res: http.ServerResponse) {
     const handle = this.findBest(req)
+    const data = await this.innerParse(req)
     if (handle) {
       try {
-        const data = await this.innerParse(req)
         const params = this.handleParams(handle, data, req)
         const chain = this.getInterceptorChain(data.pathname)
         const afterChain: THandleFn[] = []
         const interceprotorResult = await this.executePreHandle(chain, req, res, handle, afterChain)
         if (!interceprotorResult) {
-          this.send({ res, statusCode: 200, result: undefined, handle })
+          this.send({ res, statusCode: 200, result: undefined, handle, pathname: data.pathname })
         } else {
           const ret = await handle.fn.apply(handle.controller, params)
-          this.send({ res, statusCode: 200, result: this.parseResponse(ret), handle })
+          this.send({ res, statusCode: 200, result: this.parseResponse(ret), handle, pathname: data.pathname })
         }
         this.executeAfterCompletion(afterChain.reverse(), req, res, handle)
       } catch (ex: any) {
-        this.send({ res, statusCode: 500, result: ex instanceof Error ? ex.message : (ex.message || ex), handle })
+        this.send({ res, statusCode: 500, result: ex instanceof Error ? ex.message : (ex.message || ex), handle, pathname: data.pathname })
       }
     } else {
-      this.send({ res, statusCode: 404, result: undefined, handle: undefined })
+      this.send({ res, statusCode: 404, result: undefined, handle: undefined, pathname: data.pathname })
     }
   }
 
-  private send(opts: { res: http.ServerResponse, statusCode: number, result: any, handle: IPoolProps }) {
-    const { res, statusCode, result, handle } = opts
+  private send(opts: { res: http.ServerResponse, statusCode: number, result: any, handle: IPoolProps, pathname?: string }) {
+    const { res, statusCode, result, handle, pathname } = opts
+    const corss = this._config.corsRegistry.getCorsConfigurations()
+    const cors = corss.find(cors => cors.regexp?.test(pathname))
+    if (cors) {
+      if (cors.allowCredentials) res.setHeader('Access-Control-Allow-Credentials', cors.allowCredentials.toString())
+      if (cors.allowedOrigins.length) res.setHeader('Access-Control-Allow-Origin', cors.allowedOrigins.join(','))
+      if (cors.allowedMethods.length) res.setHeader('Access-Control-Allow-Methods', cors.allowedMethods.join(',').toLowerCase())
+      if (cors.maxAge !== undefined) res.setHeader('Access-Control-Max-Age', cors.maxAge)
+      if (cors.allowedHeaders.length) res.setHeader('Access-Control-Allow-Headers', cors.allowedHeaders.join(','))
+    }
     this.setHeader(handle, res)
     res.statusCode = statusCode
     res.end(result)

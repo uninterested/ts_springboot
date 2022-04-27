@@ -1,6 +1,7 @@
 import { pathToRegexp } from 'path-to-regexp'
+import CorsRegistry from '../config/annotation/cors_registry';
 import InterceptorRegistry from '../config/interceptor/interceptor_registry';
-import { kApiMethod, kMethod, kPath } from "../constant";
+import { kApiMethod, kConfiguration, kMethod, kPath } from "../constant";
 import { HttpMethod } from "../decorators";
 import Svr, { IPoolProps, IConfigProps } from "./svr";
 
@@ -8,7 +9,8 @@ import Svr, { IPoolProps, IConfigProps } from "./svr";
 export default class Factory {
   private pool: IPoolProps[] = []
   private config: IConfigProps = {
-    registry: new InterceptorRegistry()
+    registry: new InterceptorRegistry(),
+    corsRegistry: new CorsRegistry()
   }
 
   create(module: Function) {
@@ -43,8 +45,11 @@ export default class Factory {
 
   private buildConfig(configs: (typeof Function)[]) {
     configs.forEach((Fn) => {
-      const instance = new Fn()
-      instance['addInterceptors'](this.config.registry)
+      if (Reflect.getMetadata(kConfiguration, Fn)) { //Configuration
+        const instance = new Fn()
+        instance['addInterceptors'](this.config.registry)
+        instance['addCorsMappings'](this.config.corsRegistry)
+      }
     })
   }
 

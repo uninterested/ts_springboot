@@ -1,4 +1,4 @@
-import { kPath } from "../constant"
+import { kConfiguration, kPath } from "../constant"
 
 export const RestController = (path?: string | string[]): ClassDecorator => {
   let nextPath = path ?? '/'
@@ -7,4 +7,12 @@ export const RestController = (path?: string | string[]): ClassDecorator => {
   return (target: Function) => {
     Reflect.defineMetadata(kPath, nextPath, target)
   }
+}
+
+export const Configuration: ClassDecorator = (target: Function) => {
+  Reflect.defineMetadata(kConfiguration, true, target)
+}
+
+export const ControllerAdvice: ClassDecorator = (target: Function) => {
+  
 }

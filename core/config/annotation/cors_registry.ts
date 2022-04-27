@@ -9,9 +9,7 @@ export default class CorsRegistry {
     return registration
   }
 
-  protected getCorsConfigurations(): POJO<ICorsConfigurationProps> {
-    const hashMap: POJO<ICorsConfigurationProps> = {}
-    this.registrations.forEach(registration => hashMap[registration.path] = registration.getConfig())
-    return hashMap
+  public getCorsConfigurations(): ICorsConfigurationProps[] {
+    return this.registrations.map(registration => registration.getConfig())
   }
 }
