@@ -91,7 +91,7 @@ export default class Svr {
     if (cors) {
       if (cors.allowCredentials) res.setHeader('Access-Control-Allow-Credentials', cors.allowCredentials.toString())
       if (cors.allowedOrigins.length) res.setHeader('Access-Control-Allow-Origin', cors.allowedOrigins.join(','))
-      if (cors.allowedMethods.length) res.setHeader('Access-Control-Allow-Methods', cors.allowedMethods.join(',').toLowerCase())
+      if (cors.allowedMethods.length) res.setHeader('Access-Control-Allow-Methods', cors.allowedMethods.join(','))
       if (cors.maxAge !== undefined) res.setHeader('Access-Control-Max-Age', cors.maxAge)
       if (cors.allowedHeaders.length) res.setHeader('Access-Control-Allow-Headers', cors.allowedHeaders.join(','))
     }

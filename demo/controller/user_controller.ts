@@ -1,4 +1,4 @@
-import  { RestController, GET, POST, Autowired, PathValue, QueryValue, Body, Header } from '../../core/decorators'
+import  { RestController, GET, POST, Autowired, PathValue, QueryValue, Body, Header, Request } from '../../core/decorators'
 import UserService from '../services/user_service';
 
 interface IUser {
@@ -17,7 +17,10 @@ export default class UserController {
   }
 
   @POST('/hello/:s')
-  hello2(@PathValue("s") s: string, @QueryValue("d") d: string, @Body user: IUser) {
+  @Header({
+    'Content-Type': 'application/json'
+  })
+  hello2(@Request req, @PathValue("s") s: string, @QueryValue("d") d: string, @Body user: IUser) {
     return this.userService.response(s, d, user)
   }
 }
