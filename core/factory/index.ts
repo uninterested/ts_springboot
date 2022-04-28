@@ -1,9 +1,9 @@
 import { pathToRegexp } from 'path-to-regexp'
 import CorsRegistry from '../config/annotation/cors_registry';
 import InterceptorRegistry from '../config/interceptor/interceptor_registry';
-import { kApiMethod, kConfiguration, kControllerAdvice, kMethod, kPath } from "../constant";
+import { kApiMethod, kConfiguration, kControllerAdvice, kExceptionHandler, kMethod, kPath } from "../constant";
 import { HttpMethod } from "../decorators";
-import Svr, { IPoolProps, IConfigProps } from "./svr";
+import Svr, { IPoolProps, IConfigProps, IControllerAdviceHandle } from "./svr";
 
 
 export default class Factory {
@@ -12,11 +12,12 @@ export default class Factory {
     registry: new InterceptorRegistry(),
     corsRegistry: new CorsRegistry()
   }
+  private exceptionConfig: POJO<IControllerAdviceHandle> = {}
 
   create(module: Function) {
     this.clean()
     this.builder(module)
-    return new Svr(this.pool, this.config)
+    return new Svr(this.pool, this.config, this.exceptionConfig)
   }
 
   private builder(module: Function) {
@@ -33,7 +34,7 @@ export default class Factory {
       const basePaths = Reflect.getMetadata(kPath, Fn)
       const instance = new Fn()
       const methods = Reflect.getMetadata(kMethod, instance)
-      Object.keys(methods).forEach(method => {
+      Object.keys(methods || {}).forEach(method => {
         const fn = instance[method]
         const paths = Reflect.getMetadata(kPath, fn) as string[]
         const apiMethods = Reflect.getMetadata(kApiMethod, fn) as HttpMethod[]
@@ -50,7 +51,16 @@ export default class Factory {
         instance['addInterceptors'](this.config.registry)
         instance['addCorsMappings'](this.config.corsRegistry)
       } else if (Reflect.getMetadata(kControllerAdvice, Fn)) { // ControllerAdvice
-        
+        const instance = new Fn()
+        const methods = Object.keys(Reflect.getMetadata(kMethod, instance) || {})
+        methods.forEach(method => {
+          const fn = instance[method]
+          const name = Reflect.getMetadata(kExceptionHandler, fn)
+          this.exceptionConfig[name] = {
+            controller: instance,
+            fn,
+          }
+        })
       }
     })
   }

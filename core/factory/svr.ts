@@ -7,6 +7,7 @@ import InterceptorRegistry from "../config/interceptor/interceptor_registry"
 import InterceptorRegistration from "../config/interceptor/interceptor_registration"
 import HandlerMethod from "../config/interceptor/handler_method"
 import CorsRegistry from "../config/annotation/cors_registry"
+import NotFoundException from "../config/controller_advice/notfound_exception"
 
 export interface IPoolProps {
   path: string
@@ -21,15 +22,23 @@ export interface IConfigProps {
   corsRegistry: CorsRegistry
 }
 
+export interface IControllerAdviceHandle {
+  controller: Object
+  fn: Function
+}
+
 type THandleFn = (req: http.IncomingMessage, res: http.ServerResponse, handle: object) => Promise<void> | void
 
 export default class Svr {
   private _pool: IPoolProps[];
   private _config: IConfigProps;
+  private _exception: POJO<IControllerAdviceHandle>;
+
   private app?: http.Server
-  constructor(pool: IPoolProps[], config: IConfigProps) {
+  constructor(pool: IPoolProps[], config: IConfigProps, exception: POJO<IControllerAdviceHandle>) {
     this._pool = pool
     this._config = config
+    this._exception = exception
   }
 
   public listen(port: number, cb?: () => void) {
@@ -42,8 +51,8 @@ export default class Svr {
   private async processRequest(req: http.IncomingMessage, res: http.ServerResponse) {
     const handle = this.findBest(req)
     const data = await this.innerParse(req)
-    if (handle) {
-      try {
+    try {
+      if (handle) {
         const params = this.handleParams(handle, data, req)
         const chain = this.getInterceptorChain(data.pathname)
         const afterChain: THandleFn[] = []
@@ -52,15 +61,27 @@ export default class Svr {
           this.send({ res, statusCode: 200, result: undefined, handle, pathname: data.pathname })
         } else {
           const ret = await handle.fn.apply(handle.controller, params)
-          this.send({ res, statusCode: 200, result: this.parseResponse(ret), handle, pathname: data.pathname })
+          this.send({ res, statusCode: 200, result: ret, handle, pathname: data.pathname })
         }
         this.executeAfterCompletion(afterChain.reverse(), req, res, handle)
-      } catch (ex: any) {
-        this.send({ res, statusCode: 500, result: ex instanceof Error ? ex.message : (ex.message || ex), handle, pathname: data.pathname })
+      } else {
+        throw new NotFoundException('route not found')
       }
-    } else {
-      this.send({ res, statusCode: 404, result: undefined, handle: undefined, pathname: data.pathname })
+    } catch (ex: any) {
+      const { code, msg } = this.handleException(ex) ?? ex.message ?? ex
+      this.send({ res, statusCode: code, result: msg, handle, pathname: data.pathname })
     }
+  }
+
+  private handleException(ex: any) {
+    const { name } = ex
+    if (this._exception[name]) {
+      const { fn, controller } = this._exception[name]
+      const ret = fn.apply(controller, [ex])
+      return { code: 200, msg: ret }
+    }
+    const code = ex.name === 'NotFoundException' ? 404 : 500
+    return { code: code, msg: undefined }
   }
 
   private send(opts: { res: http.ServerResponse, statusCode: number, result: any, handle: IPoolProps, pathname?: string }) {
@@ -76,7 +97,7 @@ export default class Svr {
     }
     this.setHeader(handle, res)
     res.statusCode = statusCode
-    res.end(result)
+    res.end(this.parseResponse(result))
   }
 
   private async executePreHandle(

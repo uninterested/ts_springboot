@@ -1,4 +1,4 @@
-import NotFoundException from "../../core/config/exception/notfound_exception";
+import NotFoundException from "../../core/config/controller_advice/notfound_exception";
 import { ControllerAdvice } from "../../core/decorators/class_decorator";
 import { ExceptionHandler } from "../../core/decorators/function_decorator";
 
@@ -6,7 +6,7 @@ import { ExceptionHandler } from "../../core/decorators/function_decorator";
 export default class Adv {
     @ExceptionHandler(Error.name)
     handleException(ex: Error): any {
-        return {error: 'exception'}
+        return {error: 'exception:' + ex.message}
     }
 
     @ExceptionHandler(NotFoundException.name)
