@@ -3,10 +3,15 @@
 核心在core文件夹下，测试代码在demo文件夹下
 
 通过装饰器，模拟了springboot中的注解，包括：
-类级别： RestController, Configuration
-方法级别：HttpMethod, GET, POST, PUT, DELETE, PATCH, RequestMapping, Header
-属性级别：Autowired
-参数级别：Body, Request, PathValue, QueryValue
+
+*类级别*： RestController, Configuration
+
+*方法级别*：HttpMethod, GET, POST, PUT, DELETE, PATCH, RequestMapping, Header
+
+*属性级别*：Autowired
+
+*参数级别*：Body, Request, PathValue, QueryValue
+
 
 使用方法：
 
