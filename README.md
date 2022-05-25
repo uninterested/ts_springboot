@@ -53,6 +53,36 @@ export default class UserService {
 }
 ```
 
+拦截器：
+``` typescript
+@Configuration
+export default class MyConfig implements WebConfig {
+  addInterceptors(registry: InterceptorRegistry): void {
+    registry.addInterceptor(new TestInterpotor())
+      .addPathPatterns('/**')
+  }
+  addCorsMappings(registry: CorsRegistry): void {
+    registry.addMapping("/**")
+      .allowCredentials(true)
+      .allowedMethods(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.PATCH, HttpMethod.POST, HttpMethod.PUT, HttpMethod.OPTIONS)
+      .allowedHeaders('Content-Type', "token")
+      .allowedOrigins("*")
+      .maxAge(2000)
+  }
+}
+
+// 测试拦截器
+export default class TestInterpotor implements HandleInterceptor {
+  preHandle(req: IncomingMessage, res: ServerResponse, handle: any) {
+    console.log('123123: ', '测试拦截器生效')
+    return true
+  }
+  afterCompletion(req: IncomingMessage, res: ServerResponse, handle: any): void {
+    console.log('123123', 'afterCompletion')
+  }
+}
+```
+
 同时还有模拟Springboot的 **全局异常捕获**，**拦截器**等等配置，具体的可以查看demo文件夹
 
 运行效果：
